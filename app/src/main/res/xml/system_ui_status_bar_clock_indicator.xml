@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <PreferenceCategory android:title="@string/system_ui_statusbar_indicator_default_title">
-
+    <PreferenceCategory>
         <SwitchPreference
             android:defaultValue="false"
             android:key="prefs_key_system_ui_statusbar_clock_bold"
@@ -14,6 +13,18 @@
             android:title="@string/system_ui_statusbar_clock_mode"
             app:entries="@array/system_ui_status_bar_clock_mode"
             app:entryValues="@array/system_ui_status_bar_clock_mode_value" />
+
+        <com.sevtinge.cemiuiler.prefs.SeekBarPreferenceEx
+            android:defaultValue="12"
+            android:key="prefs_key_system_ui_statusbar_clock_vertical_offset"
+            android:title="@string/vertical_offset"
+            app:maxValue="24"
+            app:minValue="0"
+            app:defaultValueText="@string/array_default"
+            app:stepValue="1"
+            app:negativeShift="12"
+            app:displayDividerValue="2"
+            app:format="%s dp" />
 
     </PreferenceCategory>
 
@@ -63,20 +74,24 @@
 
         <SwitchPreference
             android:defaultValue="false"
+            android:disableDependentsState="true"
             android:key="prefs_key_system_ui_statusbar_clock_double"
             android:title="@string/system_ui_statusbar_clock_double" />
 
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="prefs_key_system_ui_statusbar_clock_double_center"
-            android:title="@string/system_ui_statusbar_clock_double_center" />
+        <DropDownPreference
+            android:defaultValue="0"
+            android:key="prefs_key_system_ui_statusbar_clock_double_mode"
+            android:title="@string/system_ui_statusbar_clock_double_mode_title"
+            app:entries="@array/system_ui_status_bar_clock_double_mode"
+            app:entryValues="@array/system_ui_status_bar_clock_double_mode_value" />
 
         <SeekBarPreference
             android:defaultValue="0"
+            android:dependency="prefs_key_system_ui_statusbar_clock_double"
             android:key="prefs_key_system_ui_statusbar_clock_size"
             android:title="@string/system_ui_statusbar_clock_size"
             android:format="%s dp"
-            app:maxValue="18"
+            app:maxValue="20"
             app:minValue="0"
             app:showSeekBarValue="true" />
 
@@ -85,7 +100,7 @@
             android:key="prefs_key_system_ui_statusbar_clock_double_size"
             android:title="@string/system_ui_statusbar_clock_double_size"
             android:format="%s dp"
-            app:maxValue="9"
+            app:maxValue="14"
             app:minValue="0"
             app:showSeekBarValue="true" />
 
@@ -107,20 +122,22 @@
                 android:data="https://zhuti.designer.xiaomi.com/docs/grammar/#时间日期" />
         </Preference>
 
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="prefs_key_system_ui_statusbar_clock_double_center_geek"
-            android:title="@string/system_ui_statusbar_clock_double_center" />
+        <DropDownPreference
+            android:defaultValue="0"
+            android:key="prefs_key_system_ui_statusbar_clock_double_mode_geek"
+            android:title="@string/system_ui_statusbar_clock_double_mode_title"
+            app:entries="@array/system_ui_status_bar_clock_double_mode"
+            app:entryValues="@array/system_ui_status_bar_clock_double_mode_value" />
 
         <SeekBarPreference
             android:defaultValue="0"
             android:key="prefs_key_system_ui_statusbar_clock_size_geek"
             android:title="@string/system_ui_statusbar_clock_size"
             android:format="%s dp"
-            app:maxValue="18"
+            app:maxValue="20"
             app:minValue="0"
             app:showSeekBarValue="true" />
     </PreferenceCategory>
-    <Preference android:summary="" />
+    <Preference android:enabled="false" />
 
 </PreferenceScreen>

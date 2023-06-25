@@ -1,9 +1,10 @@
 package com.sevtinge.cemiuiler.module.base;
 
 import com.sevtinge.cemiuiler.XposedInit;
-import com.sevtinge.cemiuiler.utils.ResourcesHook;
+import com.sevtinge.cemiuiler.utils.Helpers;
 import com.sevtinge.cemiuiler.utils.LogUtils;
 import com.sevtinge.cemiuiler.utils.PrefsMap;
+import com.sevtinge.cemiuiler.utils.ResourcesHook;
 
 import java.lang.reflect.Method;
 
@@ -15,6 +16,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 public abstract class BaseHook {
 
     public String TAG = getClass().getSimpleName();
+
+    public boolean detailLog = !mPrefsMap.getBoolean("settings_disable_detailed_log");
 
     public LoadPackageParam lpparam;
     public ResourcesHook mResHook = XposedInit.mResHook;
@@ -28,10 +31,11 @@ public abstract class BaseHook {
         try {
             setLoadPackageParam(lpparam);
             init();
-            printHookStateLog("Hook Success!");
+            if (!mPrefsMap.getBoolean("settings_disable_detailed_log"))
+                printHookStateLog("Hook Success!");
         } catch (Throwable t) {
             printHookStateLog("Hook Failed!");
-            printHookFailedLog(t);
+            Helpers.log(TAG + t);
         }
     }
 
@@ -48,7 +52,29 @@ public abstract class BaseHook {
     }
 
     public void log(String log) {
+        if (!mPrefsMap.getBoolean("settings_disable_detailed_log")) {
+            XposedBridge.log("Cemiuiler: " + TAG + " " + log);
+        }
+    }
+
+    public void logI(String log) {
         XposedBridge.log("Cemiuiler: " + TAG + " " + log);
+    }
+
+    public void logE(Exception e) {
+        XposedBridge.log("Cemiuiler: " + TAG + " hook failed by: " + e);
+    }
+
+    public void logE(Throwable t) {
+        XposedBridge.log("Cemiuiler: " + TAG + " hook failed by: " + t);
+    }
+
+    public void logE(String tag, Exception e) {
+        XposedBridge.log("Cemiuiler: " + TAG + " " + tag + " hook failed by: " + e);
+    }
+
+    public void logE(String tag, Throwable t) {
+        XposedBridge.log("Cemiuiler: " + TAG + " " + tag + " hook failed by: " + t);
     }
 
 

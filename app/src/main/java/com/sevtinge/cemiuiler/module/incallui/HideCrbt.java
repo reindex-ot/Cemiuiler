@@ -1,8 +1,6 @@
 package com.sevtinge.cemiuiler.module.incallui;
 
 import com.sevtinge.cemiuiler.module.base.BaseHook;
-import de.robv.android.xposed.*;
-import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public class HideCrbt extends BaseHook {
     Class<?> loadClass;
@@ -27,7 +25,7 @@ public class HideCrbt extends BaseHook {
                     Integer.TYPE, Boolean.TYPE, beforeHookedMethod()
             });*/
         } catch (Exception e) {
-            XposedBridge.log("Cemiuiler: HideCrbt method hooked failed! " + e);
+            log("method hooked failed! " + e);
         }
     }
     /*public final void beforeHookedMethod(XC_MethodHook.MethodHookParam methodHookParam) {

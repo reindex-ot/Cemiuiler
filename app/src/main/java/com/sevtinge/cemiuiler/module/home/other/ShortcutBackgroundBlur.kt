@@ -18,12 +18,9 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import com.sevtinge.cemiuiler.module.base.BaseHook
-import com.sevtinge.cemiuiler.utils.callMethod
-import com.sevtinge.cemiuiler.utils.callStaticMethod
-import com.sevtinge.cemiuiler.utils.findClass
-import com.sevtinge.cemiuiler.utils.getObjectField
-import com.sevtinge.cemiuiler.utils.hookAfterAllMethods
-import com.sevtinge.cemiuiler.utils.hookBeforeAllMethods
+import com.sevtinge.cemiuiler.utils.*
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import kotlin.math.sqrt
 
@@ -32,16 +29,16 @@ object ShortcutBackgroundBlur : BaseHook() {
     @RequiresApi(Build.VERSION_CODES.S)
     override fun init() {
 
-        //if (!mPrefsMap.getBoolean("home_shortcut_blur")) return
+        // if (!mPrefsMap.getBoolean("home_shortcut_blur")) return
 
         // From WINI with MIT
         val shortcutMenuBackgroundAlpha = mPrefsMap.getInt("home_other_shortcut_background_blur_custom", 200)
-        val shortcutMenuLayerClass = "com.miui.home.launcher.ShortcutMenuLayer".findClass()
-        val shortcutMenuClass = "com.miui.home.launcher.shortcuts.ShortcutMenu".findClass()
-        val blurUtilsClass = "com.miui.home.launcher.common.BlurUtils".findClass()
-        val applicationClass = "com.miui.home.launcher.Application".findClass()
-        val utilitiesClass = "com.miui.home.launcher.common.Utilities".findClass()
-        val launcherStateClass = "com.miui.home.launcher.LauncherState".findClass()
+        val shortcutMenuLayerClass = findClassIfExists("com.miui.home.launcher.ShortcutMenuLayer")
+        val shortcutMenuClass = findClassIfExists("com.miui.home.launcher.shortcuts.ShortcutMenu")
+        val blurUtilsClass = findClassIfExists("com.miui.home.launcher.common.BlurUtils")
+        val applicationClass = findClassIfExists("com.miui.home.launcher.Application")
+        val utilitiesClass = findClassIfExists("com.miui.home.launcher.common.Utilities")
+        val launcherStateClass = findClassIfExists("com.miui.home.launcher.LauncherState")
 
         /*
         两层视图alpha计算公式：2x-x^2=y
@@ -51,18 +48,20 @@ object ShortcutBackgroundBlur : BaseHook() {
         将改公式转换为x=f(y)：x=1-√(1-y)
         */
         val singleLayerAlpha = ((1.0 - sqrt(1.0 - (shortcutMenuBackgroundAlpha / 255.0))) * 255.0).toInt()
+        log("" + shortcutMenuBackgroundAlpha)
+        log("" + singleLayerAlpha)
 
-        val BLUR_ICON_APP_NAME = arrayOf("锁屏", "手电筒", "数据", "飞行模式", "蓝牙", "WLAN 热点")
-        val allBluredDrawable: MutableList<Drawable> = ArrayList()
+        val mBlurIconAppName = arrayOf("锁屏", "手电筒", "数据", "飞行模式", "蓝牙", "WLAN 热点")
+        val allBlurredDrawable: MutableList<Drawable> = ArrayList()
 
         fun showBlurDrawable() {
-            allBluredDrawable.forEach { drawable ->
+            allBlurredDrawable.forEach { drawable ->
                 XposedHelpers.callMethod(drawable, "setVisible", true, false)
             }
         }
 
         fun hideBlurDrawable() {
-            allBluredDrawable.forEach { drawable ->
+            allBlurredDrawable.forEach { drawable ->
                 XposedHelpers.callMethod(drawable, "setVisible", false, false)
             }
         }
@@ -80,10 +79,10 @@ object ShortcutBackgroundBlur : BaseHook() {
             if (iconIsInFolder) return@hookBeforeAllMethods
 
             // 文件夹内不模糊
-            val iconIsApplicatoin = dragViewInfo.callMethod("isApplicatoin") as Boolean
+            val iconIsApplication = dragViewInfo.callMethod("isApplicatoin") as Boolean
             val iconTitle = dragViewInfo.callMethod("getTitle") as String
 
-            if (!iconIsApplicatoin && !BLUR_ICON_APP_NAME.contains(iconTitle)) return@hookBeforeAllMethods
+            if (!iconIsApplication && !mBlurIconAppName.contains(iconTitle)) return@hookBeforeAllMethods
 
             val mLauncher = applicationClass.callStaticMethod("getLauncher") as Activity
             val launcherStatusField = launcherStateClass.getDeclaredField("ALL_APPS")
@@ -97,7 +96,8 @@ object ShortcutBackgroundBlur : BaseHook() {
 
             val renderEffectArray = arrayOfNulls<RenderEffect>(51)
             for (index in 0..50) {
-                renderEffectArray[index] = RenderEffect.createBlurEffect((index + 1).toFloat(), (index + 1).toFloat(), Shader.TileMode.MIRROR)
+                renderEffectArray[index] =
+                    RenderEffect.createBlurEffect((index + 1).toFloat(), (index + 1).toFloat(), Shader.TileMode.MIRROR)
             }
 
             val valueAnimator = ValueAnimator.ofInt(0, 50)
@@ -173,7 +173,11 @@ object ShortcutBackgroundBlur : BaseHook() {
                 val valueAnimator = ValueAnimator.ofInt(50, 0)
                 val renderEffectArray = arrayOfNulls<RenderEffect>(51)
                 for (index in 0..50) {
-                    renderEffectArray[index] = RenderEffect.createBlurEffect((index + 1).toFloat(), (index + 1).toFloat(), Shader.TileMode.MIRROR)
+                    renderEffectArray[index] = RenderEffect.createBlurEffect(
+                        (index + 1).toFloat(),
+                        (index + 1).toFloat(),
+                        Shader.TileMode.MIRROR
+                    )
                 }
                 valueAnimator.addUpdateListener { animator ->
                     val value = animator.animatedValue as Int
@@ -204,10 +208,101 @@ object ShortcutBackgroundBlur : BaseHook() {
             }
         }
 
+        if (shortcutMenuBackgroundAlpha != 255) {
+            XposedBridge.hookAllMethods(
+                shortcutMenuClass,
+                "setMenuBg",
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        if (!isShortcutMenuLayerBlurred) {
+                            return
+                        }
+
+                        val mAppShortcutMenu: ViewGroup
+                        val mAppShortcutMenuBackground: GradientDrawable
+
+                        val mSystemShortcutMenu: ViewGroup
+                        val mSystemShortcutMenuBackground: GradientDrawable
+
+                        val mWidgetShortcutMenu: ViewGroup
+                        val mWidgetShortcutMenuBackground: GradientDrawable
+
+                        try {
+                            mAppShortcutMenu = param.thisObject.getObjectField("mAppShortcutMenu") as ViewGroup
+                            mAppShortcutMenuBackground =
+                                mAppShortcutMenu.background as GradientDrawable
+                            mAppShortcutMenuBackground.alpha = singleLayerAlpha
+                            for (index in 0..mAppShortcutMenu.childCount) {
+                                val child = mAppShortcutMenu.getChildAt(index)
+                                if (child != null && child.background != null) {
+                                    if (child.background is Drawable) {
+                                        val childBackground = child.background as Drawable
+                                        childBackground.alpha = singleLayerAlpha
+                                    }
+                                }
+                            }
+                        } catch (_: Exception) {
+                        }
+                        try {
+                            mSystemShortcutMenu = param.thisObject.getObjectField("mSystemShortcutMenu") as ViewGroup
+                            mSystemShortcutMenuBackground =
+                                mSystemShortcutMenu.background as GradientDrawable
+                            mSystemShortcutMenuBackground.alpha = singleLayerAlpha
+                            for (index in 0..mSystemShortcutMenu.childCount) {
+                                val child = mSystemShortcutMenu.getChildAt(index)
+                                if (child != null && child.background != null) {
+                                    if (child.background is Drawable) {
+                                        val childBackground = child.background as Drawable
+                                        childBackground.alpha = singleLayerAlpha
+                                    }
+                                }
+                            }
+                        } catch (_: Exception) {
+                        }
+                        try {
+                            mWidgetShortcutMenu = param.thisObject.getObjectField("mWidgetShortcutMenu") as ViewGroup
+                            mWidgetShortcutMenuBackground =
+                                mWidgetShortcutMenu.background as GradientDrawable
+                            mWidgetShortcutMenuBackground.alpha = singleLayerAlpha
+                            for (index in 0..mWidgetShortcutMenu.childCount) {
+                                val child = mWidgetShortcutMenu.getChildAt(index)
+                                if (child != null && child.background != null) {
+                                    if (child.background is Drawable) {
+                                        val childBackground = child.background as Drawable
+                                        childBackground.alpha = singleLayerAlpha
+                                    }
+                                }
+                            }
+                        } catch (_: Exception) {
+                        }
+                    }
+                })
+            XposedBridge.hookAllMethods(
+                shortcutMenuClass,
+                "addArrow",
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        if (!isShortcutMenuLayerBlurred) {
+                            return
+                        }
+                        val mArrow = HookUtils.getValueByField(
+                            param.thisObject,
+                            "mArrow"
+                        ) as View
+                        val mArrowBackground = mArrow.background as ShapeDrawable
+                        mArrowBackground.alpha = shortcutMenuBackgroundAlpha
+                    }
+                })
+        }
+
+        /*
 
         if (shortcutMenuBackgroundAlpha != 255) {
+            log("1")
             shortcutMenuClass.hookBeforeAllMethods("setMenuBg") {
+                log("3")
                 if (!isShortcutMenuLayerBlurred) {
+                    log("2")
                     return@hookBeforeAllMethods
                 }
 
@@ -241,7 +336,9 @@ object ShortcutBackgroundBlur : BaseHook() {
             }
 
             shortcutMenuClass.hookAfterAllMethods("addArrow") {
+                log("4")
                 if (!isShortcutMenuLayerBlurred) {
+                    log("5")
                     return@hookAfterAllMethods
                 }
                 val mArrow = it.thisObject.getObjectField("mArrow") as View
@@ -249,6 +346,8 @@ object ShortcutBackgroundBlur : BaseHook() {
                 mArrowBackground.alpha = shortcutMenuBackgroundAlpha
             }
         }
+
+         */
 
         blurUtilsClass.hookAfterAllMethods("fastBlurWhenEnterRecents") {
             val launcher = it.args[0]

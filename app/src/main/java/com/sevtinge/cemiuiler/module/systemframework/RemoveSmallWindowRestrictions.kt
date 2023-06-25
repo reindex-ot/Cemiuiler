@@ -1,129 +1,119 @@
 package com.sevtinge.cemiuiler.module.systemframework
 
 import android.content.Context
-import com.github.kyuubiran.ezxhelper.utils.*
+import com.github.kyuubiran.ezxhelper.ClassUtils.loadClass
+import com.github.kyuubiran.ezxhelper.HookFactory.`-Static`.createHook
+import com.github.kyuubiran.ezxhelper.HookFactory.`-Static`.createHooks
+import com.github.kyuubiran.ezxhelper.finders.MethodFinder.`-Static`.methodFinder
 import com.sevtinge.cemiuiler.module.base.BaseHook
-import de.robv.android.xposed.XposedBridge
+import com.sevtinge.cemiuiler.utils.api.field
 
 object RemoveSmallWindowRestrictions : BaseHook() {
+    private val mSettingsClass = loadClass("com.android.server.wm.WindowManagerService\$SettingsObserver")
+    private val mWindowsUtilsClass = loadClass("android.util.MiuiMultiWindowUtils")
+    private val mWindowsClass = loadClass("android.util.MiuiMultiWindowAdapter")
+
     override fun init() {
-        // try {
-        //     findAllMethods("android.provider.Settings\$Global") {
-        //         name == "getInt"
-        //     }.hookAfter { param ->
-        //         XposedBridge.log("MaxFreeFormTest: android.provider.Settings\$Global.getInt called! param.args[1]: " + param.args[1])
-        //         if (param.args[1] == "enable_non_resizable_multi_window") {
-        //             val e = Throwable()
-        //             XposedBridge.log(e)
-        //             param.result = 1
-        //         }
-        //     }
-        //     XposedBridge.log("Cemiuiler: Hook android.provider.Settings\$Global.getInt success!")
-        // } catch (e: Throwable) {
-        //     XposedBridge.log("Cemiuiler: Hook android.provider.Settings\$Global.getInt failed!")
-        //     XposedBridge.log(e)
-        // }
-        //
         try {
-            findAllMethods("com.android.server.wm.ActivityTaskManagerService") {
+            loadClass("com.android.server.wm.ActivityTaskManagerService").methodFinder().first {
                 name == "retrieveSettings"
-            }.hookAfter { param ->
-                param.thisObject.javaClass.field("mDevEnableNonResizableMultiWindow")
-                    .setBoolean(param.thisObject, true)
+            }.createHook {
+                after { param ->
+                    param.thisObject.javaClass.field("mDevEnableNonResizableMultiWindow")
+                        .setBoolean(param.thisObject, true)
+                }
             }
-            XposedBridge.log("Cemiuiler: Hook retrieveSettings success!")
         } catch (e: Throwable) {
-            XposedBridge.log("Cemiuiler: Hook retrieveSettings failed!")
-            XposedBridge.log(e)
+            log("Hook retrieveSettings failed by: $e")
         }
 
         try {
-            findAllMethods("com.android.server.wm.WindowManagerService\$SettingsObserver") {
+            mSettingsClass.methodFinder().filter {
                 name == "updateDevEnableNonResizableMultiWindow"
-            }.hookAfter { param ->
-                val this0 = param.thisObject.javaClass.field("this\$0").get(param.thisObject)
-                val mAtmService = this0.javaClass.field("mAtmService").get(this0)
-                mAtmService.javaClass.field("mDevEnableNonResizableMultiWindow").setBoolean(mAtmService,true)
+            }.toList().createHooks {
+                after { param ->
+                    val this0 = param.thisObject.javaClass.field("this\$0").get(param.thisObject)
+                    val mAtmService = this0.javaClass.field("mAtmService").get(this0)
+                    mAtmService.javaClass.field("mDevEnableNonResizableMultiWindow").setBoolean(mAtmService, true)
+                }
             }
-            XposedBridge.log("Cemiuiler: Hook updateDevEnableNonResizableMultiWindow success!")
         } catch (e: Throwable) {
-            XposedBridge.log("Cemiuiler: Hook updateDevEnableNonResizableMultiWindow failed!")
-            XposedBridge.log(e)
+            log("Hook updateDevEnableNonResizableMultiWindow failed by: $e")
         }
 
         try {
-            findAllMethods("com.android.server.wm.WindowManagerService\$SettingsObserver") {
+            mSettingsClass.methodFinder().filter {
                 name == "onChange"
-            }.hookAfter { param ->
-                val this0 = param.thisObject.javaClass.field("this\$0").get(param.thisObject)
-                val mAtmService = this0.javaClass.field("mAtmService").get(this0)
-                mAtmService.javaClass.field("mDevEnableNonResizableMultiWindow").setBoolean(mAtmService,true)
+            }.toList().createHooks {
+                after { param ->
+                    val this0 = param.thisObject.javaClass.field("this\$0").get(param.thisObject)
+                    val mAtmService = this0.javaClass.field("mAtmService").get(this0)
+                    mAtmService.javaClass.field("mDevEnableNonResizableMultiWindow").setBoolean(mAtmService, true)
+                }
             }
-            XposedBridge.log("Cemiuiler: Hook WindowManagerService\$SettingsObserver.onChange success!")
         } catch (e: Throwable) {
-            XposedBridge.log("Cemiuiler: Hook WindowManagerService\$SettingsObserver.onChange failed!")
-            XposedBridge.log(e)
+            log("Hook onChange failed by: $e")
         }
 
         try {
-            findMethod("android.util.MiuiMultiWindowUtils") {
+            mWindowsUtilsClass.methodFinder().first {
                 name == "isForceResizeable"
-            }.hookReturnConstant(true)
-            XposedBridge.log("Cemiuiler: Hook isForceResizeable success!")
+            }.createHook {
+                returnConstant(true)
+            }
         } catch (e: Throwable) {
-            XposedBridge.log("Cemiuiler: Hook isForceResizeable failed!")
-            XposedBridge.log(e)
+            log("Hook isForceResizeable failed by: $e")
         }
 
         // Author: LittleTurtle2333
         try {
-            findMethod("com.android.server.wm.Task") {
+            loadClass("com.android.server.wm.Task").methodFinder().first {
                 name == "isResizeable"
-            }.hookReturnConstant(true)
-            XposedBridge.log("Cemiuiler: Hook isResizeable success!")
+            }.createHook {
+                returnConstant(true)
+            }
         } catch (e: Throwable) {
-            XposedBridge.log("Cemiuiler: Hook isResizeable failed!")
-            XposedBridge.log(e)
+            log("Hook isResizeable failed by: $e")
         }
 
         try {
-            findMethod("android.util.MiuiMultiWindowAdapter") {
+            mWindowsClass.methodFinder().first {
                 name == "getFreeformBlackList"
-            }.hookReturnConstant(mutableListOf<String>())
-            XposedBridge.log("Cemiuiler: Hook getFreeformBlackList success!")
+            }.createHook {
+                returnConstant(mutableListOf<String>())
+            }
         } catch (e: Throwable) {
-            XposedBridge.log("Cemiuiler: Hook getFreeformBlackList failed!")
-            XposedBridge.log(e)
+            log("Hook getFreeformBlackList failed by: $e")
         }
 
         try {
-            findMethod("android.util.MiuiMultiWindowAdapter") {
+            mWindowsClass.methodFinder().first {
                 name == "getFreeformBlackListFromCloud" && parameterTypes[0] == Context::class.java
-            }.hookReturnConstant(mutableListOf<String>())
-            XposedBridge.log("Cemiuiler: Hook getFreeformBlackListFromCloud success!")
+            }.createHook {
+                returnConstant(mutableListOf<String>())
+            }
         } catch (e: Throwable) {
-            XposedBridge.log("Cemiuiler: Hook getFreeformBlackListFromCloud failed!")
-            XposedBridge.log(e)
+            log("Hook getFreeformBlackListFromCloud failed by: $e")
         }
 
         try {
-            findAllMethods("android.util.MiuiMultiWindowAdapter") {
+            mWindowsClass.methodFinder().first {
                 name == "getStartFromFreeformBlackListFromCloud"
-            }.hookReturnConstant(mutableListOf<String>())
-            XposedBridge.log("Cemiuiler: Hook getStartFromFreeformBlackListFromCloud success!")
+            }.createHook {
+                returnConstant(mutableListOf<String>())
+            }
         } catch (e: Throwable) {
-            XposedBridge.log("Cemiuiler: Hook getStartFromFreeformBlackListFromCloud failed!")
-            XposedBridge.log(e)
+            log("Hook getStartFromFreeformBlackListFromCloud failed by: $e")
         }
 
         try {
-            findMethod("android.util.MiuiMultiWindowUtils") {
+            mWindowsUtilsClass.methodFinder().first {
                 name == "supportFreeform"
-            }.hookReturnConstant(true)
-            XposedBridge.log("Cemiuiler: Hook supportFreeform success!")
+            }.createHook {
+                returnConstant(true)
+            }
         } catch (e: Throwable) {
-            XposedBridge.log("Cemiuiler: Hook supportFreeform failed!")
-            XposedBridge.log(e)
+            log("Hook supportFreeform failed by: $e")
         }
 
     }

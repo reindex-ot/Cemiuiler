@@ -1,11 +1,13 @@
 package com.sevtinge.cemiuiler.module.home.title;
 
 import android.view.MotionEvent;
+
 import com.sevtinge.cemiuiler.module.base.BaseHook;
+
 import de.robv.android.xposed.XposedHelpers;
 import kotlin.jvm.internal.Intrinsics;
 
-//from MIUI-EXTRA by Art-Chen
+// from MIUI-EXTRA by Art-Chen
 
 public class FixAnimation extends BaseHook {
 
@@ -41,6 +43,7 @@ public class FixAnimation extends BaseHook {
                 }
             }
 
+            @Override
             protected void after(MethodHookParam param) {
                 Intrinsics.checkNotNullParameter(param, "param");
                 Object obj = param.args[0];
